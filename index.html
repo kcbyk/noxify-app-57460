@@ -73,25 +73,8 @@
             // Create a BroadcastChannel for realtime communication
             const chatChannel = new BroadcastChannel('chat_channel');
 
-            // Send message to all tabs
-            function sendMessage() {
-                const messageInput = document.getElementById('message-input');
-                const message = sanitizeInput(messageInput.value.trim());
-                if (message) {
-                    const username = document.getElementById('username').textContent;
-                    const messageData = {
-                        username,
-                        message,
-                        timestamp: Date.now()
-                    };
-                    chatChannel.postMessage(messageData);
-                    messageInput.value = '';
-                }
-            }
-
-            // Listen for new messages
-            chatChannel.onmessage = (event) => {
-                const messageData = event.data;
+            // Add message to the chat panel
+            function addMessageToPanel(messageData) {
                 const messagesDiv = document.getElementById('messages');
                 const messageElement = document.createElement('div');
                 messageElement.className = 'message mb-2 p-2 rounded-lg glass-effect';
@@ -107,6 +90,29 @@
                     duration: 500,
                     easing: 'easeOutQuad'
                 });
+            }
+
+            // Send message to all tabs
+            function sendMessage() {
+                const messageInput = document.getElementById('message-input');
+                const message = sanitizeInput(messageInput.value.trim());
+                if (message) {
+                    const username = document.getElementById('username').textContent;
+                    const messageData = {
+                        username,
+                        message,
+                        timestamp: Date.now()
+                    };
+                    chatChannel.postMessage(messageData);
+                    addMessageToPanel(messageData); // Add message to the sender's panel
+                    messageInput.value = '';
+                }
+            }
+
+            // Listen for new messages
+            chatChannel.onmessage = (event) => {
+                const messageData = event.data;
+                addMessageToPanel(messageData);
             };
 
             // Update online users count randomly between 5-15
