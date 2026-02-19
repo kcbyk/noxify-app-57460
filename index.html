@@ -73,6 +73,10 @@
             // Create a BroadcastChannel for realtime communication
             const chatChannel = new BroadcastChannel('chat_channel');
 
+            // Track active users
+            const activeUsers = new Set();
+            let userId = Date.now().toString();
+
             // Add message to the chat panel
             function addMessageToPanel(messageData) {
                 const messagesDiv = document.getElementById('messages');
@@ -115,10 +119,9 @@
                 addMessageToPanel(messageData);
             };
 
-            // Update online users count randomly between 5-15
+            // Update online users count
             function updateOnlineUsers() {
-                const userCount = Math.floor(Math.random() * 11) + 5;
-                document.getElementById('user-count').textContent = userCount;
+                document.getElementById('user-count').textContent = activeUsers.size;
             }
 
             // Change username
@@ -129,14 +132,47 @@
                 }
             }
 
+            // Handle user presence
+            function handleUserPresence() {
+                // Notify others about our presence
+                chatChannel.postMessage({
+                    type: 'presence',
+                    userId,
+                    username: document.getElementById('username').textContent,
+                    action: 'join'
+                });
+
+                // Listen for presence messages
+                chatChannel.onmessage = (event) => {
+                    if (event.data.type === 'presence') {
+                        if (event.data.action === 'join') {
+                            activeUsers.add(event.data.userId);
+                        } else if (event.data.action === 'leave') {
+                            activeUsers.delete(event.data.userId);
+                        }
+                        updateOnlineUsers();
+                    } else {
+                        addMessageToPanel(event.data);
+                    }
+                };
+
+                // Notify others when we leave
+                window.addEventListener('beforeunload', () => {
+                    chatChannel.postMessage({
+                        type: 'presence',
+                        userId,
+                        action: 'leave'
+                    });
+                });
+            }
+
             // Initialize the app
             document.addEventListener('DOMContentLoaded', () => {
                 // Set initial username
                 document.getElementById('username').textContent = generateUsername();
 
-                // Update online users count every 5 seconds
-                updateOnlineUsers();
-                setInterval(updateOnlineUsers, 5000);
+                // Handle user presence
+                handleUserPresence();
 
                 // Send message on button click
                 document.getElementById('send-button').addEventListener('click', sendMessage);
